@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Logging</title>
+    <meta charset="UTF-8">
+    <style>
+        body, html {
+            padding: 0;
+            margin: 0;
+        }
+        .log {
+            margin: 0px;
+        }
+        .entry {
+            font-family: monospace;
+            color: black;
+            padding: 5px;
+            border-top: 1px solid #666;
+            position: relative;
+            transition: all 0.1s;
+        }
+        .entry:hover {
+            cursor: pointer;
+        }
+        .entry:after {
+            content: '\A';
+            position: absolute;
+            width: 100%;
+            height:100%;
+            top:0;
+            left:0;
+            background:rgba(0,0,0,0.1);
+            opacity: 0;
+            transition: all 0.1s;
+            -webkit-transition: all 0.1s;
+            -moz-transition: all 0.1s;
+        }
+        .entry:hover:after {
+            opacity: 1;
+        }
+
+
+        .line {
+            display: flex;
+            flex-direction: row;
+        }
+        .line > .datetime {
+            width: 200px;
+            flex-shrink: 0;
+        }
+        .line > .level {
+            width: 100px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        .line > .name {
+            width: 150px;
+            flex-shrink: 0;
+            font-weight: bold;
+        }
+        .line > .message {
+            flex-grow: 1;
+        }
+        .level_ERROR {
+            background: #ffb2a4;
+        }
+        .level_WARNING {
+            background: #faffc9;
+        }
+        .level_DEBUG {
+            background: #e8e8e8;
+            color: #5e5e5e;
+        }
+    </style>
+    <script>
+        String.prototype.withContext = String.prototype.withContext ||
+        function (context) {
+            //"use strict";
+            var str = this.toString();
+            for (var k in context) {
+                str = str.replace(new RegExp("\\{" + k + "\\}", "gi"), context[k]);
+            }
+            return str;
+        };
+
+        function createElementFromHTML(htmlString) {
+          var div = document.createElement('div');
+          div.innerHTML = htmlString.trim();
+
+          // Change this to div.childNodes to support multiple top-level nodes
+          return div.firstChild;
+        }
+
+        var createEntry = function(data) {
+            var tmpl = "" +
+                "<div class='entry level_{level}'>" +
+                    "<div class='line'>" +
+                        "<div class='datetime'>{date}</div>" +
+                        "<div class='level'>{level}</div>" +
+                        "<div class='name'>{name}</div>" +
+                        "<div class='message'>{message}</div>" +
+                    "</div>" +
+                "</div>";
+
+            return createElementFromHTML(tmpl.withContext({
+                name: data.name,
+                level: data.levelname,
+                message: data.msg,
+                date: new Date(data.created).toISOString()
+            }));
+        };
+
+        window.onload = function() {
+            var wsPath = "ws://localhost:8989/";
+            var container = document.getElementById("log");
+
+            var s = new WebSocket(wsPath);
+            s.onopen = function(e) { console.log("Websocket connection opened"); };
+            s.onclose = function(e) { console.log("Websocket connection closed"); };
+            s.onmessage = function(e) {
+                console.log(JSON.parse(e.data));
+
+                var entry = createEntry(JSON.parse(e.data));
+                container.appendChild(entry);
+            }
+      };
+    </script>
+</head>
+<body>
+    <div class="log" id="log"></div>
+</body>
+</html>
